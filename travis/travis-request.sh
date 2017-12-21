@@ -17,22 +17,24 @@ auth_token=
 triggeredBy=anonymous 
 build_state=unknown
 verbose=false
+global_env=
 
 function help {
     echo "travis-request.sh [--pro] [--org] [-b | --branch <name>] [--owner <name>]"
     echo "                  [--by <value>] [-v | --verbose] --repo <name> -t|--token <value>"
     echo ""
     echo "Argument details"
-    echo "  --pro               Use travis-ci.com endpoint for private repositories."
-    echo "                      Set by default."
-    echo "  --org               Use travis-ci.org endpoint for public repositories."
-    echo "  -b|--branch <name>  Sets active branch. Default: \"master\""
-    echo "  --owner <name>      Sets slug owner name. Default: \"visallo\""
-    echo "  --by <value>        String to be added to originator message." 
-    echo "                      Default: \"anonymous\""
-    echo "  -v|--verbose        Prints Travis API responses"
-    echo "  --repo <name>       Sets slug repo name. Required field"
-    echo "  -t|--token <value>  GitHub or Travis access token. Required field"
+    echo "  --pro                   Use travis-ci.com endpoint for private repositories."
+    echo "                          Set by default."
+    echo "  --org                   Use travis-ci.org endpoint for public repositories."
+    echo "  -b|--branch <name>      Sets active branch. Default: \"master\""
+    echo "  -e|--env \"name=value\" Set global environment variables"
+    echo "  --owner <name>          Sets slug owner name. Default: \"visallo\""
+    echo "  --by <value>            String to be added to originator message."
+    echo "                          Default: \"anonymous\""
+    echo "  -v|--verbose            Prints Travis API responses"
+    echo "  --repo <name>           Sets slug repo name. Required field"
+    echo "  -t|--token <value>      GitHub or Travis access token. Required field"
     echo ""
 }
 
@@ -40,18 +42,20 @@ function help {
 function travis_build_request {
   message="Originated by ${triggeredBy}"   
 
-  body="{
-  \"request\": {
+  body="
   \"branch\":\"$branch\",
   \"message\":\"$message\"
-  }}"
+  "
+  if [ ! -z ${global_env} ]; then
+    body="${body}, \"config\":{ \"env\": { \"global\": [ ${global_env} ]}}"
+  fi
 
   response=`curl -s -X POST \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -H "Travis-API-Version: 3" \
   -H "Authorization: token ${auth_token}" \
-  -d "$body" \
+  -d "{\"request\": { ${body} }}" \
   https://api.${travis_url}/repo/${owner}%2F${repo}/requests`
   
   if [[ "$verbose" == true ]]; then 
@@ -96,7 +100,7 @@ function travis_get_build_state {
     echo ""
     fi
   else
-    echo "Unable to parse build number"
+    echo "Unable to parse build number: ${build_id}"
   fi
 }
 
@@ -132,7 +136,7 @@ function travis_cancel_build {
       echo ""
     fi
   else
-    echo "Unable to parse build number"
+    echo "Unable to parse build number: ${build_id}"
   fi
 }
 
@@ -157,6 +161,10 @@ do
     ;;
     --repo)
     repo=$2
+    shift
+    ;;
+    -e|--env)
+    global_env=$2
     shift
     ;;
     -t|--token)
