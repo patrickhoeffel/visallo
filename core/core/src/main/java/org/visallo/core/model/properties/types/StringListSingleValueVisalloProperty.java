@@ -1,6 +1,7 @@
 package org.visallo.core.model.properties.types;
 
 import org.json.JSONArray;
+import org.visallo.core.exception.VisalloException;
 import org.visallo.core.util.JSONUtil;
 
 import java.util.List;
@@ -25,8 +26,10 @@ public class StringListSingleValueVisalloProperty extends SingleValueVisalloProp
         List<String> valueList;
         if (value instanceof String) {
             valueList = JSONUtil.toStringList(JSONUtil.parseArray(value.toString()));
-        } else {
+        } else if (value instanceof List) {
             valueList = (List<String>) value;
+        } else {
+            throw new VisalloException("Could not unwrap type: " + value.getClass().getName());
         }
 
         return valueList;
