@@ -16,10 +16,19 @@ public class StringListSingleValueVisalloProperty extends SingleValueVisalloProp
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public List<String> unwrap(Object value) {
         if (value == null) {
             return null;
         }
-        return JSONUtil.toStringList(JSONUtil.parseArray(value.toString()));
+
+        List<String> valueList;
+        if (value instanceof String) {
+            valueList = JSONUtil.toStringList(JSONUtil.parseArray(value.toString()));
+        } else {
+            valueList = (List<String>) value;
+        }
+
+        return valueList;
     }
 }
