@@ -12,7 +12,7 @@ import static org.apache.commons.lang.StringUtils.trimToNull;
 @Singleton
 public class ContentSecurityPolicy {
     protected static final String CONTENT_SECURITY_POLICY = "web.response.header.Content-Security-Policy";
-    protected static final String PREFIX = "web.response.header.Content-Security-Policy.";
+    protected static final String PREFIX = CONTENT_SECURITY_POLICY + ".";
     protected static final String APPEND = ".append";
 
     protected static final String DEFAULT_SRC = "default-src";
