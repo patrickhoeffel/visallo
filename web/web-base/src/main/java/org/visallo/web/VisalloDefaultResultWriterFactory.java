@@ -30,8 +30,7 @@ import java.lang.reflect.Method;
 
 @Singleton
 public class VisalloDefaultResultWriterFactory implements ResultWriterFactory {
-    public static final String WEB_RESPONSE_HEADER_X_FRAME_OPTIONS = "web.response.header.X-Frame-Options";
-    public static final String WEB_RESPONSE_HEADER_X_FRAME_OPTIONS_DEFAULT = "DENY";
+
     private final String responseHeaderXFrameOptions;
     private ACLProvider aclProvider;
     private WorkspaceRepository workspaceRepository;
@@ -47,7 +46,7 @@ public class VisalloDefaultResultWriterFactory implements ResultWriterFactory {
         this.aclProvider = aclProvider;
         this.workspaceRepository = workspaceRepository;
         this.userRepository = userRepository;
-        this.responseHeaderXFrameOptions = configuration.get(WEB_RESPONSE_HEADER_X_FRAME_OPTIONS, WEB_RESPONSE_HEADER_X_FRAME_OPTIONS_DEFAULT);
+        this.responseHeaderXFrameOptions = configuration.get(Configuration.WEB_RESPONSE_HEADER_X_FRAME_OPTIONS, null);
     }
 
     @Override
