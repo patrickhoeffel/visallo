@@ -54,6 +54,7 @@ define([
 
         propTypes: {
             configProperties: PropTypes.object.isRequired,
+            onUpdateViewport: PropTypes.func.isRequired,
             onSelectElements: PropTypes.func.isRequired,
             onVertexMenu: PropTypes.func.isRequired,
             elements: PropTypes.shape({ vertices: PropTypes.object, edges: PropTypes.object })
@@ -91,6 +92,8 @@ define([
                 this.props.onDropElementIds(elementIds)
             })
 
+            this.saveViewportDebounce = _.debounce(this.saveViewport, 250);
+
             this.legacyListeners({
                 fileImportSuccess: { node: $('.products-full-pane.visible')[0], handler: (event, { vertexIds }) => {
                     this.props.onDropElementIds({vertexIds});
@@ -106,6 +109,7 @@ define([
 
             $(this.wrap).off('selectAll');
             $(document).off('.org-visallo-map');
+            this.saveViewport(this.props)
         },
 
         componentWillReceiveProps(nextProps) {
@@ -138,6 +142,8 @@ define([
                         clearCaches={this.requestUpdateDebounce}
                         setLayerOrder={setLayerOrder}
                         onTap={this.onTap}
+                        onPan={this.onViewport}
+                        onZoom={this.onViewport}
                         onContextTap={this.onContextTap}
                         onSelectElements={onSelectElements}
                         onMouseOver={this.onMouseOver}
@@ -208,6 +214,30 @@ define([
             const { onUpdatePreview, product } = this.props;
 
             onUpdatePreview(product.id, dataUrl);
+        },
+
+        onViewport(event) {
+            const { product: { id: productId } } = this.props;
+            const view = event.target;
+            const zoom = view.getZoom();
+            const pan = [...view.getCenter()];
+
+            if (!this.currentViewport) {
+                this.currentViewport = {};
+            }
+            this.currentViewport[productId] = { zoom, pan };
+
+            this.saveViewportDebounce(this.props);
+        },
+
+        saveViewport(props) {
+            if (this.mounted) {
+                var productId = props.product.id;
+                if (this.currentViewport && productId in this.currentViewport) {
+                    var viewport = this.currentViewport[productId];
+                    props.onUpdateViewport(productId, viewport);
+                }
+            }
         },
 
         getGeometry(edgeInfo, element, ontology) {

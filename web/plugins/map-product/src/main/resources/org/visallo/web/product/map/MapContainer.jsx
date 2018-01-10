@@ -70,6 +70,9 @@ define([
 
                 onUpdatePreview: (id, dataUrl) => dispatch(productActions.updatePreview(id, dataUrl)),
 
+                // TODO: these should be mapActions
+                onUpdateViewport: (id, { pan, zoom }) => dispatch(productActions.updateViewport(id, { pan, zoom })),
+
                 // For DroppableHOC
                 onDrop: (event) => {
                     const elements = dnd.getElementsFromDataTransfer(event.dataTransfer);
