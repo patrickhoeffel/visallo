@@ -13,6 +13,8 @@ define([
 
     const noop = function() {};
 
+    const { BaseLayerLoaded } = layerHelpers;
+
     const ANIMATION_DURATION = 200,
         MIN_FIT_ZOOM_RESOLUTION = 30,
         MAX_FIT_ZOOM_RESOLUTION = 20000,
@@ -132,7 +134,7 @@ define([
 
         componentDidUpdate(prevProps, prevState) {
             const { map, layersWithSources } = this.state;
-            const { product, sourcesByLayerId, layerExtensions, layerConfig, focused, viewport, generatePreview } = this.props;
+            const { product, sourcesByLayerId, layerExtensions, layerConfig, focused, generatePreview } = this.props;
 
             let changed = false;
             let fit = [];
@@ -177,17 +179,12 @@ define([
                 this.fit({ limitToFeatures: fit });
             }
 
-            if (viewport && !_.isEmpty(viewport)) {
-                map.getView().setCenter(viewport.pan);
-                map.getView().setResolution(viewport.zoom);
-            }
-
             if (map && (!prevState.map || prevProps.layerConfig !== layerConfig)) {
                 this.applyLayerConfig();
             }
 
             if (generatePreview) {
-                this._updatePreview({ fit: !viewport });
+                this._updatePreview({ fit: true });
             } else if (changed) {
                 this.updatePreview();
             }
@@ -195,74 +192,79 @@ define([
 
         _updatePreview(options = {}) {
             const { fit = false } = options;
+            const task = this.updatingPreviewTask;
+
+            if (task) {
+                task.cancel();
+            }
+
+            this.updatingPreviewTask = this._updatePreviewTask(fit);
+        },
+
+        _updatePreviewTask(fit) {
+            const { onUpdatePreview } = this.props;
             const { map, layersWithSources } = this.state;
             const { base } = layersWithSources;
-            const doFit = () => {
-                if (fit) this.fit({ animate: false });
-            };
 
-            // Since this is delayed, make sure component not unmounted
-            if (!this._canvasPreviewBuffer) return;
+            var cancelled = false;
 
-            doFit();
-            map.once('postcompose', (event) => {
-                if (!this._canvasPreviewBuffer) return;
-                var loading = 0, loaded = 0, events, captureTimer;
+            const cancel = () => {
+                cancelled = true;
+            }
+            const teardown = () => {
+                cancel();
+                this._canvasPreviewBuffer = null;
+            }
 
-                doFit();
+            if (!this._canvasPreviewBuffer) {
+                this._canvasPreviewBuffer = document.createElement('canvas');
+                this._canvasPreviewBuffer.width = PREVIEW_WIDTH;
+                this._canvasPreviewBuffer.height = PREVIEW_HEIGHT;
+            }
+            const previewCanvas = this._canvasPreviewBuffer;
 
-                const mapCanvas = event.context.canvas;
-                const capture = _.debounce(() => {
-                    if (!this._canvasPreviewBuffer) return;
+            if (fit) {
+                this.fit({ animate: false });
+            }
 
-                    doFit();
+            if (map.get(BaseLayerLoaded)) {
+                capture();
+            } else {
+                map.once('change:' + BaseLayerLoaded, () => {
+                    _.delay(capture, 250);
+                });
+            }
 
-                    map.once('postrender', () => {
-                        if (!this._canvasPreviewBuffer) return;
-                        var newCanvas = this._canvasPreviewBuffer;
-                        var context = newCanvas.getContext('2d');
-                        var hRatio = PREVIEW_WIDTH / mapCanvas.width;
-                        var vRatio = PREVIEW_HEIGHT / mapCanvas.height;
-                        var ratio = Math.min(hRatio, vRatio);
-                        newCanvas.width = Math.trunc(mapCanvas.width * ratio);
-                        newCanvas.height = Math.trunc(mapCanvas.height * ratio);
-                        context.drawImage(mapCanvas,
-                            0, 0, mapCanvas.width, mapCanvas.height,
-                            0, 0, newCanvas.width, newCanvas.height
-                        );
-                        if (events) {
-                            events.forEach(key => ol.Observable.unByKey(key));
-                        }
-                        this.props.onUpdatePreview(newCanvas.toDataURL('image/png'));
-                    });
-                    map.renderSync();
-                }, 100)
+            return { cancel, teardown }
 
-                const tileLoadStart = () => {
-                    clearTimeout(captureTimer);
-                    ++loading;
-                };
-                const tileLoadEnd = (event) => {
-                    clearTimeout(captureTimer);
-                    if (loading === ++loaded) {
-                        captureTimer = capture();
-                    }
-                };
+            function capture() {
+                if (cancelled) return;
 
-                events = [
-                    base.source.on('tileloadstart', tileLoadStart),
-                    base.source.on('tileloadend', tileLoadEnd),
-                    base.source.on('tileloaderror', tileLoadEnd)
-                ];
-            });
-            map.renderSync();
+                map.once('postcompose', event => {
+                    if (cancelled) return;
+                    var mapCanvas = event.context.canvas;
+                    var context = previewCanvas.getContext('2d');
+                    var hRatio = PREVIEW_WIDTH / mapCanvas.width;
+                    var vRatio = PREVIEW_HEIGHT / mapCanvas.height;
+                    var ratio = Math.min(hRatio, vRatio);
+                    previewCanvas.width = Math.trunc(mapCanvas.width * ratio);
+                    previewCanvas.height = Math.trunc(mapCanvas.height * ratio);
+                    context.drawImage(mapCanvas,
+                        0, 0, mapCanvas.width, mapCanvas.height,
+                        0, 0, previewCanvas.width, previewCanvas.height
+                    );
+
+                    _.defer(() => {
+                        if (cancelled) return;
+                        const dataUrl = previewCanvas.toDataURL('image/png');
+                        onUpdatePreview(dataUrl);
+                    })
+                })
+                map.renderSync();
+            }
         },
 
         componentDidMount() {
-            this._canvasPreviewBuffer = document.createElement('canvas');
-            this._canvasPreviewBuffer.width = PREVIEW_WIDTH;
-            this._canvasPreviewBuffer.height = PREVIEW_HEIGHT;
-
             this.olEvents = [];
             this.domEvents = [];
             this.updatePreview = _.debounce(this._updatePreview, PREVIEW_DEBOUNCE_SECONDS * 1000);
@@ -273,6 +275,9 @@ define([
 
         componentWillUnmount() {
             this._canvasPreviewBuffer = null;
+            if (this.updatingPreviewTask) {
+                this.updatingPreviewTask.teardown();
+            }
             clearTimeout(this._handleMouseMoveTimeout);
             if (this.domEvents) {
                 this.domEvents.forEach(fn => fn());

@@ -11,6 +11,7 @@ define([
 ) {
     'use strict';
 
+    const BaseLayerLoaded = 'baseLayerLoaded';
     const FEATURE_CLUSTER_RADIUS = 12;
     const FEATURE_CLUSTER_RADIUS_MAX = 20;
     const VECTOR_FEATURE_SELECTION_OVERLAY = 'org-visallo-map-vector-selected-overlay';
@@ -50,7 +51,44 @@ define([
             },
 
             addEvents(map, { source }, handlers) {
+                const events = []
+
+                if (source instanceof ol.source.TileImage) {
+                    var numInFlightTiles = 0;
+                    events.push(
+                        source.on('tileloadstart', () => { ++numInFlightTiles; }),
+                        source.on('tileloadend', () => { --numInFlightTiles; }),
+                        source.on('tileloaderror', () => { --numInFlightTiles; }),
+                        map.on('postrender', event => {
+                            const { frameState } = event;
+
+                            if (!frameState) return;
+
+                            const wanted = frameState.wantedTiles;
+                            var numHeldTiles = 0;
+
+                            for (let layer in wanted) {
+                                if (wanted.hasOwnProperty(layer)) {
+                                    numHeldTiles += Object.keys(wanted[layer]).length;
+                                }
+                            }
+
+                            const ready = (
+                                numInFlightTiles === 0 &&
+                                numHeldTiles === 0
+                            );
+                            if (map.get(BaseLayerLoaded) !== ready) {
+                                map.set(BaseLayerLoaded, ready);
+                            }
+                        })
+                    );
+                    map.set(BaseLayerLoaded, false);
+                } else {
+                    map.set(BaseLayerLoaded, true)
+                }
+
                 return [
+                    ...events,
                     source.on('tileloaderror', function(event) {
                         const MaxRetry = 3;
                         const { tile } = event;
@@ -624,6 +662,7 @@ define([
     return {
         byType: layers,
         styles,
-        setLayerConfig
+        setLayerConfig,
+        BaseLayerLoaded
     }
 })

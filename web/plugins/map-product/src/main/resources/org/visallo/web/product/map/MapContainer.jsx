@@ -51,7 +51,6 @@ define([
                 ontologyProperties: ontologySelectors.getProperties(state),
                 panelPadding: state.panel.padding,
                 selection: productSelectors.getSelectedElementsInProduct(state),
-                viewport: productSelectors.getViewport(state),
                 productElementIds: productSelectors.getElementIdsInProduct(state),
                 product: productSelectors.getProduct(state),
                 elements: productSelectors.getElementsInProduct(state),
@@ -70,9 +69,6 @@ define([
                 onSelectAll: (id) => dispatch(productActions.selectAll(id)),
 
                 onUpdatePreview: (id, dataUrl) => dispatch(productActions.updatePreview(id, dataUrl)),
-
-                // TODO: these should be mapActions
-                onUpdateViewport: (id, { pan, zoom }) => dispatch(productActions.updateViewport(id, { pan, zoom })),
 
                 // For DroppableHOC
                 onDrop: (event) => {

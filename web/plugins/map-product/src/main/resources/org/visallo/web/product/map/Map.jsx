@@ -54,28 +54,13 @@ define([
 
         propTypes: {
             configProperties: PropTypes.object.isRequired,
-            onUpdateViewport: PropTypes.func.isRequired,
             onSelectElements: PropTypes.func.isRequired,
             onVertexMenu: PropTypes.func.isRequired,
             elements: PropTypes.shape({ vertices: PropTypes.object, edges: PropTypes.object })
         },
 
         getInitialState() {
-            return { viewport: this.props.viewport, generatePreview: true }
-        },
-
-        shouldComponentUpdate(nextProps) {
-            const onlyViewportChanged = Object.keys(nextProps).every(key => {
-                if (key === 'viewport') {
-                    return true;
-                }
-                return this.props[key] === nextProps[key];
-            })
-
-            if (onlyViewportChanged) {
-                return false;
-            }
-            return true;
+            return { generatePreview: true }
         },
 
         componentWillMount() {
@@ -106,8 +91,6 @@ define([
                 this.props.onDropElementIds(elementIds)
             })
 
-            this.saveViewportDebounce = _.debounce(this.saveViewport, 250);
-
             this.legacyListeners({
                 fileImportSuccess: { node: $('.products-full-pane.visible')[0], handler: (event, { vertexIds }) => {
                     this.props.onDropElementIds({vertexIds});
@@ -123,20 +106,18 @@ define([
 
             $(this.wrap).off('selectAll');
             $(document).off('.org-visallo-map');
-            this.saveViewport(this.props)
         },
 
         componentWillReceiveProps(nextProps) {
             if (nextProps.product.id === this.props.product.id) {
-                this.setState({ viewport: {}, generatePreview: false })
+                this.setState({ generatePreview: false })
             } else {
-                this.saveViewport(this.props)
-                this.setState({ viewport: nextProps.viewport || {}, generatePreview: true })
+                this.setState({ generatePreview: true })
             }
         },
 
         render() {
-            const { viewport, generatePreview } = this.state;
+            const { generatePreview } = this.state;
             const { product, registry, panelPadding, focused, layerConfig, setLayerOrder, onSelectElements } = this.props;
             const { source: baseSource, sourceOptions: baseSourceOptions, ...config } = mapConfig();
             const layerExtensions = _.indexBy(registry['org.visallo.map.layer'], 'id');
@@ -152,14 +133,11 @@ define([
                         sourcesByLayerId={this.mapElementsToSources()}
                         layerExtensions={layerExtensions}
                         layerConfig={layerConfig}
-                        viewport={viewport}
                         generatePreview={generatePreview}
                         panelPadding={panelPadding}
                         clearCaches={this.requestUpdateDebounce}
                         setLayerOrder={setLayerOrder}
                         onTap={this.onTap}
-                        onPan={this.onViewport}
-                        onZoom={this.onViewport}
                         onContextTap={this.onContextTap}
                         onSelectElements={onSelectElements}
                         onMouseOver={this.onMouseOver}
@@ -226,34 +204,10 @@ define([
             }
         },
 
-        onUpdatePreview() {
+        onUpdatePreview(dataUrl) {
             const { onUpdatePreview, product } = this.props;
 
-            onUpdatePreview(product.id);
-        },
-
-        onViewport(event) {
-            const { product: { id: productId } } = this.props;
-            const view = event.target;
-            const zoom = view.getZoom();
-            const pan = [...view.getCenter()];
-
-            if (!this.currentViewport) {
-                this.currentViewport = {};
-            }
-            this.currentViewport[productId] = { zoom, pan };
-
-            this.saveViewportDebounce(this.props);
-        },
-
-        saveViewport(props) {
-            if (this.mounted) {
-                var productId = props.product.id;
-                if (this.currentViewport && productId in this.currentViewport) {
-                    var viewport = this.currentViewport[productId];
-                    props.onUpdateViewport(productId, viewport);
-                }
-            }
+            onUpdatePreview(product.id, dataUrl);
         },
 
         getGeometry(edgeInfo, element, ontology) {
