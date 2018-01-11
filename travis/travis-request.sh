@@ -62,6 +62,7 @@ function travis_build_request {
   response=`curl -s -X POST \
     -H "Travis-API-Version: 3" \
     -H "Authorization: token ${auth_token}" \
+    -H "Content-Type: application/json" \
     -d "${body}" \
     https://api.${travis_url}/repo/${owner}%2F${repo}/requests`
 
