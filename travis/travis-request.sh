@@ -47,8 +47,11 @@ function travis_build_request {
   \"branch\":\"$branch\",
   \"message\":\"$message\"
   "
+  branches_to_build="\"branches\": { \"only\": \"$branch\"}"
   if [ ! -z ${global_env} ]; then
-    body="${body}, \"config\":{ \"env\": { \"global\": [ ${global_env} ]}}"
+    body="${body}, \"config\":{ \"env\": { \"global\": [ \" ${global_env}\" ]}, ${branches_to_build}}"
+  else
+    body="${body}, \"config\":{${branches_to_build}}"
   fi
 
   body="{\"request\": { ${body} }}"
