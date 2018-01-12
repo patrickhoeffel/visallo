@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 # 
 # The following script has been created to interact with the Travis API. It has
 # been derived from the Travis API documentation site: https://docs.travis-ci.com/api
@@ -29,7 +29,7 @@ function help {
     echo "                          Set by default."
     echo "  --org                   Use travis-ci.org endpoint for public repositories."
     echo "  -b|--branch <name>      Sets active branch. Default: \"master\""
-    echo "  -e|--env \"name=value\" Set global environment variables"
+    echo "  -e|--env \"name=value\" Set global environment variables, Multiple: \"name1=value1\",\"name2=value2\""
     echo "  --owner <name>          Sets slug owner name. Default: \"visallo\""
     echo "  --by <value>            String to be added to originator message."
     echo "                          Default: \"anonymous\""
@@ -49,7 +49,7 @@ function travis_build_request {
   "
   branches_to_build="\"branches\": { \"only\": \"$branch\"}"
   if [ ! -z ${global_env} ]; then
-    body="${body}, \"config\":{ \"env\": { \"global\": [ \" ${global_env}\" ]}, ${branches_to_build}}"
+    body="${body}, \"config\":{ \"env\": { \"global\": [ ${global_env} ]}, ${branches_to_build}}"
   else
     body="${body}, \"config\":{${branches_to_build}}"
   fi
