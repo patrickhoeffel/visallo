@@ -39,11 +39,13 @@ else
   fi
 
   # Checking to see if repo branch exists in visallo-lts
+  set +e
   LTS_BRANCH_TO_BUILD=${REPOS_BRANCH}
   wget --no-cache --spider -d --header="Authorization: token ${GIT_API_ACCESS_TOKEN}" https://api.github.com/repos/visallo/visallo-lts/branches/${REPOS_BRANCH}
   if [ $? != 0 ]; then
-    LTS_BRANCH_TO_BUILD=${TRAVIS_BRANCH}
+    LTS_BRANCH_TO_BUILD=master
   fi
+  set -e
 
   ./travis/travis-request.sh \
     --repo ${TRAVIS_DOWNSTREAM_REPO} \

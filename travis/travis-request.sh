@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 # 
 # The following script has been created to interact with the Travis API. It has
 # been derived from the Travis API documentation site: https://docs.travis-ci.com/api
