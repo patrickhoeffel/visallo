@@ -15,6 +15,7 @@ branches:
   only:
     - master
     - /^release-.*$/
+    - build-lts-for-prs-master
 cache:
   directories:
     - ${HOME}/.npm
